@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 import { DEFAULT_PATTERN, BREATHING_PATTERNS } from '../constants/breathingPatterns';
 
 // 創建上下文
@@ -18,44 +18,20 @@ export const BreathingProvider = ({ children }) => {
     isActive: false,  // 呼吸循環是否正在進行
   });
   
-  // 語言設置
-  const [language, setLanguage] = useState(() => {
-    // 嘗試從本地儲存獲取語言設置
-    const savedLanguage = localStorage.getItem('breathing-app-language');
-    return savedLanguage || 'zh'; // 默認為中文
+  // 語言設置 - 默認為中文，不再從 localStorage 讀取
+  const [language, setLanguage] = useState('zh');
+  
+  // 控制設置 - 使用默認值，不再從 localStorage 讀取
+  const [settings, setSettings] = useState({
+    totalCycles: 0,         // 預設總循環次數
+    currentCycle: 0,         // 當前循環
+    showVisualGuide: true,   // 是否顯示視覺引導
+    showTextGuide: true,     // 是否顯示文字引導
+    musicMuted: true,        // 背景音樂是否靜音
+    volume: 0.5              // 音量 (0-1)
   });
   
-  // 控制設置
-  const [settings, setSettings] = useState(() => {
-    // 嘗試從本地儲存獲取用戶設置
-    const savedSettings = localStorage.getItem('breathing-app-settings');
-    if (savedSettings) {
-      try {
-        return JSON.parse(savedSettings);
-      } catch (e) {
-        console.error('Error parsing saved settings:', e);
-      }
-    }
-    // 預設設置 - 簡化音訊相關設置
-    return {
-      totalCycles: 0,         // 預設總循環次數
-      currentCycle: 0,         // 當前循環
-      showVisualGuide: true,   // 是否顯示視覺引導
-      showTextGuide: true,     // 是否顯示文字引導
-      musicMuted: true,        // 背景音樂是否靜音
-      volume: 0.5              // 音量 (0-1)
-    };
-  });
-  
-  // 監聽設置變化並保存到本地儲存
-  useEffect(() => {
-    localStorage.setItem('breathing-app-settings', JSON.stringify(settings));
-  }, [settings]);
-  
-  // 監聽語言變化並保存到本地儲存
-  useEffect(() => {
-    localStorage.setItem('breathing-app-language', language);
-  }, [language]);
+  // 移除監聽設置變化並保存到本地儲存的代碼
   
   // 切換呼吸模式
   const changeBreathingPattern = (patternId) => {
