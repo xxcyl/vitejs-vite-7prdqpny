@@ -12,6 +12,9 @@ function App() {
   const { settings } = useBreathing();
   useBreathingCycle(); // 初始化呼吸循環
   
+  // 檢測是否為 iOS 設備
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
   // 初始化用戶互動處理
   useEffect(() => {
     // 初始化用戶互動處理器
@@ -41,6 +44,66 @@ function App() {
       window.removeEventListener('orientationchange', updateHeight);
     };
   }, []);
+  
+  // 處理頁面可見性變更
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && audioService.audioContext) {
+        console.log('頁面重新可見，檢查音訊狀態');
+        // 檢查並恢復音訊（如果處於暫停狀態）
+        if (audioService.audioContext.state === 'suspended' && 
+            !settings.musicMuted && 
+            audioService.isPlaying) {
+          audioService.audioContext.resume().catch(e => console.warn('恢復音訊上下文失敗:', e));
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [settings.musicMuted]);
+  
+  // iOS 特定處理：頁面焦點和頁面可見性變化
+  useEffect(() => {
+    if (!isIOS) return;
+    
+    const handleIOSFocus = () => {
+      console.log('iOS: 頁面獲得焦點');
+      if (audioService.audioContext && !settings.musicMuted) {
+        if (audioService.audioContext.state === 'suspended') {
+          audioService.audioContext.resume().catch(e => console.warn('iOS 焦點恢復音訊失敗:', e));
+        }
+        
+        // 如果沒有背景音樂但應該有，重新開始播放
+        if (audioService.musicBuffer && !audioService.backgroundMusic) {
+          setTimeout(() => audioService.playBackgroundMusic(), 300);
+        }
+      }
+    };
+    
+    window.addEventListener('focus', handleIOSFocus);
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        console.log('iOS: 頁面從緩存恢復');
+        // 從 bfcache 恢復時需要特別處理
+        setTimeout(() => {
+          if (audioService.audioContext && !settings.musicMuted) {
+            audioService.audioContext.resume().catch(e => console.warn('iOS bfcache 恢復音訊失敗:', e));
+            if (audioService.musicBuffer && !audioService.backgroundMusic) {
+              setTimeout(() => audioService.playBackgroundMusic(), 300);
+            }
+          }
+        }, 500);
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleIOSFocus);
+      window.removeEventListener('pageshow', handleIOSFocus);
+    };
+  }, [isIOS, settings.musicMuted]);
 
   return (
     <Layout>
