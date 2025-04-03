@@ -16,7 +16,6 @@ const BreathingGuide = () => {
       inhale: '吸氣...',
       exhale: '呼氣...',
       hold: '屏息...',
-      rest: '靜止...',
       focus: '關注呼吸...',
       cycle: '循環',
     },
@@ -25,7 +24,6 @@ const BreathingGuide = () => {
       inhale: 'Inhale...',
       exhale: 'Exhale...',
       hold: 'Hold...',
-      rest: 'Rest...',
       focus: 'Focus on breath...',
       cycle: 'Cycle',
     }
@@ -49,7 +47,7 @@ const BreathingGuide = () => {
       case 'holdInhale':
         return t.hold;
       case 'holdExhale':
-        return t.rest;
+        return t.hold; // 修改此處，呼氣後也顯示為「屏息」而非「靜止」
       default:
         return t.focus;
     }
