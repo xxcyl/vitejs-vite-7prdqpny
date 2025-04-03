@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useBreathing } from '../contexts/BreathingContext';
 import useBreathingCycle from '../hooks/useBreathingCycle';
 import { BREATHING_PATTERNS } from '../constants/breathingPatterns';
+import { BACKGROUND_MUSIC } from '../constants/audioConstants';
+import MuteToggleButton from './MuteToggleButton';
+import audioService from '../services/AudioService';
 
 const BreathingControls = () => {
   const { 
@@ -34,7 +37,16 @@ const BreathingControls = () => {
       resetCycle();
     }
     
+    // 切換呼吸引導狀態
     toggleBreathing();
+    
+    // 如果是要暫停呼吸引導，也將音樂設為靜音
+    if (breathPhase.isActive) {
+      if (!settings.musicMuted) {
+        updateSettings({ musicMuted: true });
+        audioService.setMuted(true);
+      }
+    }
   };
   
   // 處理重置按鈕
@@ -59,11 +71,6 @@ const BreathingControls = () => {
     updateSettings({ [setting]: value });
   };
   
-  // 處理語言切換
-  const handleLanguageChange = () => {
-    changeLanguage(language === 'zh' ? 'en' : 'zh');
-  };
-  
   // 點擊外部時關閉下拉菜單
   useEffect(() => {
     function handleClickOutside(event) {
@@ -85,6 +92,13 @@ const BreathingControls = () => {
     };
   }, []);
   
+  // 獲取當前音樂名稱
+  const getMusicName = () => {
+    return language === 'zh' 
+      ? BACKGROUND_MUSIC.NAME.zh 
+      : BACKGROUND_MUSIC.NAME.en;
+  };
+  
   // 多語言文字
   const texts = {
     zh: {
@@ -96,11 +110,11 @@ const BreathingControls = () => {
       infinite: '無限',
       showVisualGuide: '顯示視覺引導',
       showTextGuide: '顯示文字提示',
-      backgroundMusic: '背景音樂',
-      developing: '(開發中)',
       language: '語言 / Language',
       chinese: '中文',
       english: 'English',
+      bgMusic: '背景音樂',
+      nowPlaying: '正在播放'
     },
     en: {
       reset: 'Reset',
@@ -111,11 +125,11 @@ const BreathingControls = () => {
       infinite: 'Infinite',
       showVisualGuide: 'Show Visual Guide',
       showTextGuide: 'Show Text Guide',
-      backgroundMusic: 'Background Music',
-      developing: '(In Development)',
       language: 'Language / 語言',
       chinese: '中文',
       english: 'English',
+      bgMusic: 'Background Music',
+      nowPlaying: 'Now Playing'
     }
   };
   
@@ -139,23 +153,27 @@ const BreathingControls = () => {
           </svg>
         </button>
         
-        {/* 開始/暫停按鈕 */}
+        {/* 開始/暫停按鈕 - 改為與其他按鈕一致的風格 */}
         <button
-          className="btn btn-circle btn-primary"
+          className="btn btn-circle btn-sm btn-ghost"
           onClick={handleToggleBreathing}
           aria-label={breathPhase.isActive ? t.pause : t.start}
+          title={breathPhase.isActive ? t.pause : t.start}
         >
           {breathPhase.isActive ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="6" y="4" width="4" height="16"></rect>
               <rect x="14" y="4" width="4" height="16"></rect>
             </svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
           )}
         </button>
+        
+        {/* 靜音/取消靜音按鈕 */}
+        <MuteToggleButton />
         
         {/* 設置按鈕 */}
         <button
@@ -207,6 +225,14 @@ const BreathingControls = () => {
           </div>
         )}
       </div>
+      
+      {/* 顯示音樂曲目（放在底部） */}
+      {!settings.musicMuted && (
+        <div className="text-xs opacity-60 mb-2 text-center animate-pulse">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-ping mr-1 align-middle"></span> 
+          {t.nowPlaying}: {getMusicName()}
+        </div>
+      )}
       
       {/* 設置面板 - 優化彈出位置 */}
       {showSettings && (
@@ -261,24 +287,12 @@ const BreathingControls = () => {
               <span className="label-text">{t.showTextGuide}</span>
             </label>
             
-            <label className="label cursor-pointer justify-start gap-2">
-              <input
-                type="checkbox"
-                className="toggle toggle-primary toggle-sm"
-                checked={settings.backgroundMusic}
-                onChange={(e) => handleDisplayChange('backgroundMusic', e.target.checked)}
-              />
-              <span className="label-text">
-                {t.backgroundMusic} <span className="text-xs opacity-70">{t.developing}</span>
-              </span>
-            </label>
-            
             {/* 語言切換 - 改進版 */}
             <div className="pt-4 border-t border-base-200">
               <label className="label justify-start gap-2">
                 <span className="label-text">{t.language}</span>
               </label>
-              <div className="flex mt-1">
+              <div className="flex gap-2 mt-1">
                 <button
                   className={`btn btn-sm flex-1 ${language === 'zh' ? 'btn-primary' : 'btn-outline'}`}
                   onClick={() => changeLanguage('zh')}

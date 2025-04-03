@@ -36,13 +36,14 @@ export const BreathingProvider = ({ children }) => {
         console.error('Error parsing saved settings:', e);
       }
     }
-    // 預設設置
+    // 預設設置 - 簡化音訊相關設置
     return {
-      totalCycles: 10,      // 預設總循環次數
-      currentCycle: 0,      // 當前循環
-      showVisualGuide: true, // 是否顯示視覺引導
-      showTextGuide: true,   // 是否顯示文字引導
-      backgroundMusic: false, // 是否播放背景音樂
+      totalCycles: 0,         // 預設總循環次數
+      currentCycle: 0,         // 當前循環
+      showVisualGuide: true,   // 是否顯示視覺引導
+      showTextGuide: true,     // 是否顯示文字引導
+      musicMuted: true,        // 背景音樂是否靜音
+      volume: 0.5              // 音量 (0-1)
     };
   });
   

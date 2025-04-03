@@ -12,7 +12,7 @@ const Layout = ({ children }) => {
   
   // 多語言標題
   const getTitle = () => {
-    return language === 'zh' ? '呼吸引導' : 'Breathing Guide';
+    return 'InEx'; // 新的應用名稱
   };
   
   // 多語言描述
@@ -41,7 +41,7 @@ const Layout = ({ children }) => {
       
       {/* 版權信息 */}
       <div className="absolute bottom-1 left-0 right-0 text-center text-xs opacity-50 z-10">
-        &copy; {new Date().getFullYear()} {language === 'zh' ? '呼吸引導應用' : 'Breathing Guide App'}
+        &copy; {new Date().getFullYear()} InEx
       </div>
     </div>
   );

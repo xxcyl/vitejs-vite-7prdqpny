@@ -5,10 +5,24 @@ import BreathingGuide from './components/BreathingGuide';
 import BreathingControls from './components/BreathingControls';
 import { useBreathing } from './contexts/BreathingContext';
 import useBreathingCycle from './hooks/useBreathingCycle';
+import audioService from './services/AudioService';
+import userInteractionHandler from './utils/userInteractionHandler';
 
 function App() {
   const { settings } = useBreathing();
   useBreathingCycle(); // 初始化呼吸循環
+  
+  // 初始化用戶互動處理
+  useEffect(() => {
+    // 初始化用戶互動處理器
+    userInteractionHandler.init();
+    
+    // 組件卸載時清理
+    return () => {
+      // 釋放音訊資源
+      audioService.dispose();
+    };
+  }, []);
   
   // 修復 iOS Safari 上的視口高度問題
   useEffect(() => {
