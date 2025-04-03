@@ -31,40 +31,21 @@ const BreathingGuide = () => {
     }
   };
   
-  // 根據呼吸階段獲取指導顏色
-  const getGuideColor = () => {
-    const { phase } = breathPhase;
-    
-    switch (phase) {
-      case 'inhale':
-        return 'text-primary';
-      case 'exhale':
-        return 'text-secondary';
-      case 'holdInhale':
-        return 'text-accent';
-      case 'holdExhale':
-        return 'text-info';
-      default:
-        return 'text-base-content';
-    }
-  };
-  
-  // 呼吸進度提示
-  const progressPercentage = Math.round(breathPhase.progress * 100);
-  
-  // 使用與原始 HTML 一致的樣式
+  // 使用與原始 HTML 一致的樣式，但增加響應式調整
   return (
     <div 
-      className="absolute bottom-30 left-0 right-0 text-center z-10 text-white opacity-80 transition-opacity duration-500"
+      className="fixed bottom-10 sm:bottom-20 left-0 right-0 text-center z-20 transition-opacity duration-500"
       style={{ 
-        bottom: '30px', 
         fontSize: '24px',
-        textShadow: '0 0 10px rgba(255,255,255,0.5)'
+        textShadow: '0 0 10px rgba(255,255,255,0.5)',
+        opacity: 0.8
       }}
     >
-      {getGuideText()}
+      <div className="text-white px-4">
+        {getGuideText()}
+      </div>
       
-      <div className="mt-2 text-sm opacity-70">
+      <div className="mt-2 text-sm opacity-70 text-white">
         {breathPhase.isActive && settings.totalCycles > 0 && (
           <span>
             循環 {settings.currentCycle + 1} / {settings.totalCycles}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Layout from './components/Layout';
 import BreathingAnimation from './components/BreathingAnimation';
 import BreathingGuide from './components/BreathingGuide';
@@ -9,6 +9,24 @@ import useBreathingCycle from './hooks/useBreathingCycle';
 function App() {
   const { settings } = useBreathing();
   useBreathingCycle(); // 初始化呼吸循環
+  
+  // 修復 iOS Safari 上的視口高度問題
+  useEffect(() => {
+    const updateHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    // 初始設置和事件監聽
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    window.addEventListener('orientationchange', updateHeight);
+    
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('orientationchange', updateHeight);
+    };
+  }, []);
 
   return (
     <Layout>

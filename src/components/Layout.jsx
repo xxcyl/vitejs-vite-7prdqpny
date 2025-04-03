@@ -12,12 +12,12 @@ const Layout = ({ children }) => {
   
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden" style={backgroundStyle}>
-      {/* 主標題 - 調整至頂部邊緣，增加間距 */}
-      <div className="absolute top-4 left-0 right-0 text-center z-10">
-        <h1 className="text-2xl font-bold tracking-wider text-primary">
+      {/* 主標題 - 改善排版與響應式顯示 */}
+      <div className="absolute top-4 left-0 right-0 text-center z-10 px-4">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-wider text-primary">
           呼吸引導
         </h1>
-        <div className="text-xs opacity-70 mt-1">
+        <div className="text-xs sm:text-sm opacity-70 mt-1 max-w-md mx-auto line-clamp-2">
           {activePattern.name} - {activePattern.description}
         </div>
       </div>

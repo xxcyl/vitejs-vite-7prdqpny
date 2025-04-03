@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useBreathing } from '../contexts/BreathingContext';
 import useBreathingCycle from '../hooks/useBreathingCycle';
 import { BREATHING_PATTERNS } from '../constants/breathingPatterns';
@@ -20,6 +20,10 @@ const BreathingControls = () => {
   
   // 設置面板的狀態
   const [showSettings, setShowSettings] = useState(false);
+  
+  // 參考下拉菜單元素，用於處理點擊外部關閉
+  const dropdownRef = useRef(null);
+  const settingsRef = useRef(null);
   
   // 處理開始/暫停按鈕
   const handleToggleBreathing = () => {
@@ -53,9 +57,30 @@ const BreathingControls = () => {
     updateSettings({ [setting]: value });
   };
   
-  // 將控制面板移至頂部中間位置，並增加距離
+  // 點擊外部時關閉下拉菜單
+  useEffect(() => {
+    function handleClickOutside(event) {
+      // 處理模式下拉菜單
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowPatternDropdown(false);
+      }
+      
+      // 處理設置面板
+      if (settingsRef.current && !settingsRef.current.contains(event.target) &&
+          !event.target.closest('[data-settings-toggle]')) {
+        setShowSettings(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // 將控制面板移至頂部中間位置，增加響應式適配
   return (
-    <div className="absolute top-24 left-0 right-0 flex flex-col items-center z-20">
+    <div className="fixed top-20 sm:top-24 left-0 right-0 flex flex-col items-center z-20">
       {/* 主要控制按鈕 */}
       <div className="flex items-center space-x-4 mb-2">
         {/* 重置按鈕 */}
@@ -95,6 +120,7 @@ const BreathingControls = () => {
           onClick={() => setShowSettings(!showSettings)}
           aria-label="設置"
           title="呼吸設置"
+          data-settings-toggle
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
@@ -103,8 +129,8 @@ const BreathingControls = () => {
         </button>
       </div>
       
-      {/* 呼吸模式選擇器 */}
-      <div className="relative mb-2">
+      {/* 呼吸模式選擇器 - 優化下拉顯示 */}
+      <div className="relative mb-2" ref={dropdownRef}>
         <button
           className="btn btn-sm btn-ghost"
           onClick={() => setShowPatternDropdown(!showPatternDropdown)}
@@ -116,7 +142,7 @@ const BreathingControls = () => {
         </button>
         
         {showPatternDropdown && (
-          <div className="absolute bottom-full mb-2 w-64 bg-base-300 rounded-lg shadow-lg p-2 z-30">
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-base-300 rounded-lg shadow-lg p-2 z-30 max-h-60 overflow-y-auto">
             {Object.keys(BREATHING_PATTERNS).map((patternKey) => (
               <button
                 key={patternKey}
@@ -124,16 +150,19 @@ const BreathingControls = () => {
                 onClick={() => handlePatternChange(patternKey)}
               >
                 <div className="font-medium">{BREATHING_PATTERNS[patternKey].name}</div>
-                <div className="text-xs opacity-70">{BREATHING_PATTERNS[patternKey].description}</div>
+                <div className="text-xs opacity-70 line-clamp-2">{BREATHING_PATTERNS[patternKey].description}</div>
               </button>
             ))}
           </div>
         )}
       </div>
       
-      {/* 設置面板 */}
+      {/* 設置面板 - 優化彈出位置 */}
       {showSettings && (
-        <div className="bg-base-300 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-lg p-4 w-80 mb-3 absolute -bottom-64">
+        <div 
+          ref={settingsRef}
+          className="bg-base-300 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-lg p-4 w-80 absolute top-full left-1/2 transform -translate-x-1/2 mt-2 max-h-96 overflow-y-auto z-30"
+        >
           <h3 className="text-lg font-medium mb-3">呼吸設置</h3>
           
           {/* 循環次數設置 */}
