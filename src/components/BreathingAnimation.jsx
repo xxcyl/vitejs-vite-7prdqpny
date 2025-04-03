@@ -15,8 +15,8 @@ const BreathingAnimation = () => {
   const originalPositionsRef = useRef(null);
   const particleMaterialRef = useRef(null);
   
-  // 粒子設置 - 與原始 HTML 保持一致
-  const particleCount = 3000;
+  // 粒子設置 - 增加粒子數量
+  const particleCount = 5000; // 增加到5000個粒子
   const particleSize = 0.1;
   const maxDistance = 20;  // 最大距離 (呼氣)
   const minDistance = 10;  // 最小距離 (吸氣)
@@ -25,7 +25,7 @@ const BreathingAnimation = () => {
   useEffect(() => {
     if (!containerRef.current) return;
     
-    // 1. 創建場景、相機和渲染器 - 與原始 HTML 保持一致
+    // 1. 創建場景、相機和渲染器
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75, 
@@ -38,7 +38,7 @@ const BreathingAnimation = () => {
     });
     
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.setClearColor(0x000000, 1); // 使用黑色背景，與原始 HTML 保持一致
+    renderer.setClearColor(0x000000, 1); // 使用黑色背景
     containerRef.current.appendChild(renderer.domElement);
     
     // 設置相機位置
@@ -50,7 +50,12 @@ const BreathingAnimation = () => {
     const originalPositions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
     
-    // 產生粒子的初始位置 (球形分佈) - 與原始 HTML 保持一致
+    // 顏色
+    const primaryColor = new THREE.Color(activePattern.color.primary);
+    const secondaryColor = new THREE.Color(activePattern.color.secondary);
+    const accentColor = new THREE.Color(activePattern.color.accent || '#5eead4');
+    
+    // 產生粒子的初始位置 (球形分佈)
     for (let i = 0; i < particleCount; i++) {
       // 隨機球坐標
       const radius = THREE.MathUtils.randFloat(minDistance, maxDistance);
@@ -71,25 +76,63 @@ const BreathingAnimation = () => {
       originalPositions[index + 1] = y;
       originalPositions[index + 2] = z;
       
-      // 設置藍紫色調 (與原始 HTML 保持一致)
+      // 從內到外漸變顏色 - 更複雜的顏色分配邏輯
       const distance = Math.sqrt(x * x + y * y + z * z);
       const normalizedDistance = distance / maxDistance;
       
-      // 從內到外漸變藍紫色
-      colors[index] = 0.5 + normalizedDistance * 0.3; // R
-      colors[index + 1] = 0.2 + normalizedDistance * 0.3; // G
-      colors[index + 2] = 0.8; // B
+      // 隨機選擇顏色混合方式，增加色彩變化
+      let color;
+      const colorVariant = Math.random();
+      
+      if (colorVariant < 0.6) {
+        // 主色和次色之間的漸變 (60%的粒子)
+        color = new THREE.Color().lerpColors(
+          primaryColor,
+          secondaryColor,
+          normalizedDistance
+        );
+      } else if (colorVariant < 0.9) {
+        // 次色和強調色之間的漸變 (30%的粒子)
+        color = new THREE.Color().lerpColors(
+          secondaryColor,
+          accentColor,
+          normalizedDistance
+        );
+      } else {
+        // 強調色和主色之間的漸變 (10%的粒子)
+        color = new THREE.Color().lerpColors(
+          accentColor,
+          primaryColor,
+          normalizedDistance
+        );
+      }
+      
+      // 添加一點隨機變化，使顏色更豐富
+      color.r += (Math.random() * 0.1) - 0.05;
+      color.g += (Math.random() * 0.1) - 0.05;
+      color.b += (Math.random() * 0.1) - 0.05;
+      
+      // 確保顏色值在有效範圍內
+      color.r = Math.max(0, Math.min(1, color.r));
+      color.g = Math.max(0, Math.min(1, color.g));
+      color.b = Math.max(0, Math.min(1, color.b));
+      
+      colors[index] = color.r;
+      colors[index + 1] = color.g;
+      colors[index + 2] = color.b;
     }
     
     particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     
-    // 粒子材質 (增加發光效果) - 與原始 HTML 保持一致
+    // 粒子材質 (增加發光效果)
     const particleMaterial = new THREE.PointsMaterial({
       size: particleSize,
       vertexColors: true,
       transparent: true,
       opacity: 0.8,
+      // 添加發光效果
+      blending: THREE.AdditiveBlending,
     });
     
     // 創建粒子系統
@@ -131,9 +174,9 @@ const BreathingAnimation = () => {
       particleMaterial.dispose();
       renderer.dispose();
     };
-  }, []); // 只在組件掛載時初始化一次
+  }, [activePattern.color]); // 顏色變化時重建場景
   
-  // 動畫更新邏輯 - 與原始 HTML 保持一致
+  // 動畫更新邏輯
   useEffect(() => {
     if (!particleSystemRef.current) return;
     
@@ -145,7 +188,7 @@ const BreathingAnimation = () => {
       
       animationFrameId = requestAnimationFrame(animate);
       
-      // 增加時間計數 - 與原始 HTML 保持一致
+      // 增加時間計數
       time += 0.016; // 每幀約16毫秒
       
       // 計算當前呼吸階段和進度
@@ -162,7 +205,7 @@ const BreathingAnimation = () => {
       // 判斷呼吸階段
       const isInhaling = phase === 'inhale';
       
-      // 計算當前的縮放比例 (使用正弦函數使動畫更平滑) - 與原始 HTML 保持一致
+      // 計算當前的縮放比例 (使用正弦函數使動畫更平滑)
       let scale;
       if (isInhaling) {
         // 吸氣: 從1.0降到0.6 (粒子收縮)
@@ -180,7 +223,7 @@ const BreathingAnimation = () => {
         scale = 1.0; // 默認狀態
       }
       
-      // 更新粒子位置 - 與原始 HTML 保持一致
+      // 更新粒子位置
       const positions = particlesRef.current.attributes.position.array;
       
       for (let i = 0; i < particleCount; i++) {
@@ -193,11 +236,17 @@ const BreathingAnimation = () => {
         positions[index] = originalX * scale;
         positions[index + 1] = originalY * scale;
         positions[index + 2] = originalZ * scale;
+        
+        // 添加輕微的隨機波動，使粒子看起來更活躍
+        const wobble = 0.03;
+        positions[index] += (Math.random() - 0.5) * wobble;
+        positions[index + 1] += (Math.random() - 0.5) * wobble;
+        positions[index + 2] += (Math.random() - 0.5) * wobble;
       }
       
       particlesRef.current.attributes.position.needsUpdate = true;
       
-      // 根據呼吸階段平滑調整粒子大小 - 與原始 HTML 保持一致
+      // 根據呼吸階段平滑調整粒子大小
       if (isInhaling) {
         particleMaterialRef.current.size = particleSize * (1 + breathProgress * 0.5);
       } else if (phase === 'exhale') {
@@ -208,7 +257,14 @@ const BreathingAnimation = () => {
         particleMaterialRef.current.size = particleSize;
       }
       
-      // 非常緩慢地旋轉粒子系統 - 與原始 HTML 保持一致
+      // 隨著呼吸階段改變粒子透明度
+      if (isInhaling) {
+        particleMaterialRef.current.opacity = 0.7 + (breathProgress * 0.3);
+      } else if (phase === 'exhale') {
+        particleMaterialRef.current.opacity = 1.0 - (breathProgress * 0.3);
+      }
+      
+      // 非常緩慢地旋轉粒子系統
       particleSystemRef.current.rotation.y += 0.0005;
       particleSystemRef.current.rotation.x += 0.0002;
       
