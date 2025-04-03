@@ -1,4 +1,4 @@
-// 音效服務模組 - 改進版，特別處理 iOS 音訊問題
+// 音效服務模組 - 修復版，兼容 Mac 同時支持 iOS
 class AudioService {
   constructor() {
     this.audioContext = null;
@@ -12,6 +12,10 @@ class AudioService {
     this.lastErrorTime = 0;
     this.errorCount = 0;
     this.iosAudioUnlocked = false; // 追踪 iOS 音訊解鎖狀態
+    
+    // 檢測設備類型
+    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    this.isMac = /Mac/.test(navigator.userAgent) && !this.isIOS;
   }
 
   // 初始化音訊上下文
@@ -40,8 +44,10 @@ class AudioService {
       this.gainNode.gain.value = this.isMuted ? 0 : this.volume;
       this.gainNode.connect(this.audioContext.destination);
 
-      // 添加 iOS Safari 焦點事件監聽
-      this._setupIOSFocusEvents();
+      // 只有在 iOS 上才添加特殊的焦點事件處理
+      if (this.isIOS) {
+        this._setupIOSFocusEvents();
+      }
 
       this.isInitialized = true;
       this.errorCount = 0;
@@ -55,13 +61,12 @@ class AudioService {
 
   // 添加這個方法來處理 iOS Safari 焦點事件
   _setupIOSFocusEvents() {
-    // 檢測是否為 iOS 裝置
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    console.log('設置 iOS 特定的焦點事件處理');
     
     // 當頁面從背景切回來時，嘗試恢復音訊
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && this.audioContext && this.isPlaying) {
-        console.log('頁面可見性變更，檢查音訊狀態...');
+        console.log('iOS: 頁面可見性變更，檢查音訊狀態...');
         this._checkAndRestoreAudio();
       }
     });
@@ -69,26 +74,21 @@ class AudioService {
     // iOS Safari 特定問題：當從其他應用返回時
     window.addEventListener('focus', () => {
       if (this.audioContext && this.isPlaying) {
-        console.log('頁面獲得焦點，檢查音訊狀態...');
+        console.log('iOS: 頁面獲得焦點，檢查音訊狀態...');
         this._checkAndRestoreAudio();
       }
     });
     
-    // iOS 特定處理
-    if (isIOS) {
-      console.log('檢測到 iOS 設備，啟用額外的音訊解鎖機制');
-      
-      // iOS Safari 特定問題：響應頁面交互
-      document.addEventListener('touchend', () => {
-        if (this.audioContext && this.audioContext.state === 'suspended') {
-          console.log('iOS 觸摸結束，嘗試解鎖音訊...');
-          this._unlockIOSAudio();
-        }
-      }, false);
-      
-      // 針對 iOS 的特殊音訊解鎖
-      this._setupIOSAudioUnlock();
-    }
+    // iOS Safari 特定問題：響應頁面交互
+    document.addEventListener('touchend', () => {
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        console.log('iOS: 觸摸結束，嘗試解鎖音訊...');
+        this._unlockIOSAudio();
+      }
+    }, false);
+    
+    // 針對 iOS 的特殊音訊解鎖
+    this._setupIOSAudioUnlock();
   }
   
   // iOS 音訊解鎖特殊處理
@@ -321,7 +321,11 @@ class AudioService {
       this.backgroundMusic.start(0);
       
       this.isPlaying = true;
-      console.log('開始播放背景音樂');
+      console.log('開始播放背景音樂，靜音狀態:', this.isMuted);
+      
+      // 確保應用正確的靜音狀態
+      this.gainNode.gain.value = this.isMuted ? 0 : this.volume;
+      
       return true;
     } catch (error) {
       this._logError('播放背景音樂失敗:', error);
@@ -343,9 +347,22 @@ class AudioService {
   pauseBackgroundMusic() {
     if (this.isPlaying && this.audioContext) {
       try {
+        // 對於非 iOS 設備，我們不暫停上下文，只是停止音源
+        if (!this.isIOS) {
+          if (this.backgroundMusic) {
+            this.backgroundMusic.stop();
+            this.backgroundMusic.disconnect();
+            this.backgroundMusic = null;
+          }
+          this.isPlaying = false;
+          console.log('背景音樂已暫停');
+          return true;
+        } 
+        
+        // 對於 iOS，暫停整個上下文
         this.audioContext.suspend();
         this.isPlaying = false;
-        console.log('背景音樂已暫停');
+        console.log('背景音樂已暫停 (iOS 模式)');
         return true;
       } catch (error) {
         this._logError('暫停背景音樂失敗:', error);
@@ -360,10 +377,9 @@ class AudioService {
     if (this.audioContext) {
       try {
         // 檢查是否需要重建音源
-        if (this.isPlaying && !this.backgroundMusic && this.musicBuffer) {
+        if (!this.backgroundMusic && this.musicBuffer) {
           console.log('沒有活躍的音源，重新創建...');
-          this.playBackgroundMusic();
-          return true;
+          return this.playBackgroundMusic();
         }
         
         // 恢復 suspended 的音訊上下文

@@ -67,14 +67,9 @@ const MuteToggleButton = () => {
         // 設置初始靜音狀態
         audioService.setMuted(settings.musicMuted);
         
-        // 在 iOS 上，確保音訊上下文處於活躍狀態
-        if (isIOS && audioService.audioContext && audioService.audioContext.state === 'suspended') {
-          try {
-            await audioService.audioContext.resume();
-            console.log('iOS: 音訊上下文已手動恢復');
-          } catch (e) {
-            console.warn('iOS: 恢復音訊上下文失敗', e);
-          }
+        // 確保在 Mac 上正確設置音量
+        if (audioService.gainNode) {
+          audioService.gainNode.gain.value = settings.musicMuted ? 0 : audioService.volume;
         }
         
       } catch (error) {
@@ -101,30 +96,6 @@ const MuteToggleButton = () => {
       loadMusic();
     }
     
-    // 如果是 iOS 裝置，添加頁面可見性變化處理
-    if (isIOS) {
-      const handleVisibilityChange = () => {
-        if (!document.hidden && musicLoaded) {
-          console.log('iOS: 頁面可見性變更，檢查音訊狀態');
-          
-          // 檢查音訊上下文
-          if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-            audioService.audioContext.resume().catch(e => console.warn('恢復音訊上下文失敗:', e));
-          }
-          
-          // 如果應該播放但沒有音源，嘗試重建
-          if (!settings.musicMuted && (!audioService.backgroundMusic || !audioService.isPlaying)) {
-            setTimeout(() => audioService.playBackgroundMusic(), 300);
-          }
-        }
-      };
-      
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      
-      return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      };
-    }
   }, []);
   
   // 監聽呼吸狀態變化
@@ -133,13 +104,6 @@ const MuteToggleButton = () => {
     
     // 確保音樂在呼吸活動時繼續播放
     if (breathPhase.isActive) {
-      if (isIOS) {
-        // 對於 iOS，每次都確保音訊上下文是活躍的
-        if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-          audioService.audioContext.resume().catch(e => console.warn('恢復音訊上下文失敗:', e));
-        }
-      }
-      
       audioService.resumeBackgroundMusic();
     }
   }, [breathPhase.isActive, musicLoaded]);
@@ -148,14 +112,14 @@ const MuteToggleButton = () => {
   useEffect(() => {
     if (!musicLoaded) return;
     
+    // 確保音量設置正確應用
     audioService.setMuted(settings.musicMuted);
     
-    // 在 iOS 上，切換靜音狀態時確保音訊上下文是活躍的
-    if (isIOS && !settings.musicMuted) {
-      if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-        audioService.audioContext.resume().catch(e => console.warn('恢復音訊上下文失敗:', e));
-      }
+    // 額外確認 gainNode 有正確的音量值
+    if (audioService.gainNode) {
+      audioService.gainNode.gain.value = settings.musicMuted ? 0 : audioService.volume;
     }
+    
   }, [settings.musicMuted, musicLoaded]);
   
   // 處理靜音按鈕點擊
@@ -166,11 +130,6 @@ const MuteToggleButton = () => {
       if (userInteractionHandler.hasUserInteracted()) {
         // 手動觸發交互以解鎖音訊
         userInteractionHandler.triggerInteraction();
-        
-        // 特別處理 iOS
-        if (isIOS) {
-          audioService.audioContext?.resume().catch(e => console.warn('恢復音訊上下文失敗:', e));
-        }
         
         // 重新加載音樂
         audioService.loadBackgroundMusic(BACKGROUND_MUSIC.URL)
@@ -186,14 +145,6 @@ const MuteToggleButton = () => {
           .catch(() => setAudioError(true));
       }
       return;
-    }
-    
-    // 特別處理 iOS 設備
-    if (isIOS) {
-      // 在 iOS 上，每次操作都要檢查音訊上下文
-      if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-        audioService.audioContext.resume().catch(e => console.warn('恢復音訊上下文失敗:', e));
-      }
     }
 
     // 如果音訊尚未加載，嘗試加載
@@ -214,7 +165,13 @@ const MuteToggleButton = () => {
     }
     
     // 更新設置和音訊服務的靜音狀態
-    updateSettings({ musicMuted: !settings.musicMuted });
+    const newMutedState = !settings.musicMuted;
+    updateSettings({ musicMuted: newMutedState });
+    
+    // 立即應用新的靜音狀態，確保在 Mac 上也能正確工作
+    if (audioService.gainNode) {
+      audioService.gainNode.gain.value = newMutedState ? 0 : audioService.volume;
+    }
   };
 
   return (
