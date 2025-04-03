@@ -2,36 +2,78 @@ import React from 'react';
 import { useBreathing } from '../contexts/BreathingContext';
 
 const BreathingGuide = () => {
-  const { breathPhase, settings } = useBreathing();
+  const { breathPhase, settings, language } = useBreathing();
   
   // 如果不顯示文字引導則不渲染
   if (!settings.showTextGuide) {
     return null;
   }
   
+  // 多語言文字
+  const texts = {
+    zh: {
+      preparing: '準備開始...',
+      inhale: '吸氣...',
+      exhale: '呼氣...',
+      hold: '屏息...',
+      rest: '靜止...',
+      focus: '關注呼吸...',
+      cycle: '循環',
+    },
+    en: {
+      preparing: 'Ready...',
+      inhale: 'Inhale...',
+      exhale: 'Exhale...',
+      hold: 'Hold...',
+      rest: 'Rest...',
+      focus: 'Focus on breath...',
+      cycle: 'Cycle',
+    }
+  };
+  
+  const t = texts[language];
+  
   // 根據呼吸階段獲取指導文字
   const getGuideText = () => {
     const { phase, isActive } = breathPhase;
     
     if (!isActive) {
-      return '準備開始...';
+      return t.preparing;
     }
     
     switch (phase) {
       case 'inhale':
-        return '吸氣...';
+        return t.inhale;
       case 'exhale':
-        return '呼氣...';
+        return t.exhale;
       case 'holdInhale':
-        return '屏息...';
+        return t.hold;
       case 'holdExhale':
-        return '靜止...';
+        return t.rest;
       default:
-        return '關注呼吸...';
+        return t.focus;
     }
   };
   
-  // 使用與原始 HTML 一致的樣式，但增加響應式調整
+  // 根據呼吸階段獲取指導顏色
+  const getGuideColor = () => {
+    const { phase } = breathPhase;
+    
+    switch (phase) {
+      case 'inhale':
+        return 'text-primary';
+      case 'exhale':
+        return 'text-secondary';
+      case 'holdInhale':
+        return 'text-accent';
+      case 'holdExhale':
+        return 'text-info';
+      default:
+        return 'text-base-content';
+    }
+  };
+  
+  // 使用與原始 HTML 一致的樣式
   return (
     <div 
       className="fixed bottom-10 sm:bottom-20 left-0 right-0 text-center z-20 transition-opacity duration-500"
@@ -48,7 +90,7 @@ const BreathingGuide = () => {
       <div className="mt-2 text-sm opacity-70 text-white">
         {breathPhase.isActive && settings.totalCycles > 0 && (
           <span>
-            循環 {settings.currentCycle + 1} / {settings.totalCycles}
+            {t.cycle} {settings.currentCycle + 1} / {settings.totalCycles}
           </span>
         )}
       </div>

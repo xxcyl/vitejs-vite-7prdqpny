@@ -4,7 +4,9 @@ export const BREATHING_PATTERNS = {
   NORMAL: {
     id: 'normal',
     name: '一般呼吸',
+    nameEn: 'Normal Breathing',
     description: '平衡的吸氣和呼氣節奏，有助於放鬆和冥想',
+    descriptionEn: 'Balanced inhale and exhale rhythm, helps with relaxation and meditation',
     inhaleTime: 4.0,  // 吸氣時間 (秒)
     exhaleTime: 4.0,  // 呼氣時間 (秒)
     holdAfterInhale: 0, // 吸氣後停頓時間 (秒)
@@ -16,12 +18,13 @@ export const BREATHING_PATTERNS = {
     }
   },
   
-  // 可擴充的其他呼吸模式範例
   // 4-7-8 呼吸法 (Dr. Andrew Weil 推廣的放鬆呼吸法)
   RELAX_478: {
     id: 'relax_478',
     name: '4-7-8 放鬆呼吸法',
+    nameEn: '4-7-8 Relaxing Breath',
     description: '吸氣4秒，屏息7秒，呼氣8秒，有助於減輕壓力和焦慮',
+    descriptionEn: 'Inhale for 4 seconds, hold for 7 seconds, exhale for 8 seconds, helps reduce stress and anxiety',
     inhaleTime: 4.0,
     exhaleTime: 8.0,
     holdAfterInhale: 7.0,
@@ -37,7 +40,9 @@ export const BREATHING_PATTERNS = {
   BOX: {
     id: 'box',
     name: '方塊呼吸法',
+    nameEn: 'Box Breathing',
     description: '吸氣，屏息，呼氣，屏息各4秒，形成一個"方塊"節奏',
+    descriptionEn: 'Inhale, hold, exhale, hold for 4 seconds each, forming a "box" rhythm',
     inhaleTime: 4.0,
     exhaleTime: 4.0,
     holdAfterInhale: 4.0,

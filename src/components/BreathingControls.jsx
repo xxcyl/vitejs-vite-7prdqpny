@@ -10,7 +10,9 @@ const BreathingControls = () => {
     toggleBreathing, 
     changeBreathingPattern,
     settings,
-    updateSettings
+    updateSettings,
+    language,
+    changeLanguage
   } = useBreathing();
   
   const { resetCycle } = useBreathingCycle();
@@ -57,6 +59,11 @@ const BreathingControls = () => {
     updateSettings({ [setting]: value });
   };
   
+  // 處理語言切換
+  const handleLanguageChange = () => {
+    changeLanguage(language === 'zh' ? 'en' : 'zh');
+  };
+  
   // 點擊外部時關閉下拉菜單
   useEffect(() => {
     function handleClickOutside(event) {
@@ -78,6 +85,42 @@ const BreathingControls = () => {
     };
   }, []);
   
+  // 多語言文字
+  const texts = {
+    zh: {
+      reset: '重置',
+      start: '開始',
+      pause: '暫停',
+      settings: '設置',
+      cycles: '循環次數',
+      infinite: '無限',
+      showVisualGuide: '顯示視覺引導',
+      showTextGuide: '顯示文字提示',
+      backgroundMusic: '背景音樂',
+      developing: '(開發中)',
+      language: '語言 / Language',
+      chinese: '中文',
+      english: 'English',
+    },
+    en: {
+      reset: 'Reset',
+      start: 'Start',
+      pause: 'Pause',
+      settings: 'Settings',
+      cycles: 'Cycles',
+      infinite: 'Infinite',
+      showVisualGuide: 'Show Visual Guide',
+      showTextGuide: 'Show Text Guide',
+      backgroundMusic: 'Background Music',
+      developing: '(In Development)',
+      language: 'Language / 語言',
+      chinese: '中文',
+      english: 'English',
+    }
+  };
+  
+  const t = texts[language];
+  
   // 將控制面板移至頂部中間位置，增加響應式適配
   return (
     <div className="fixed top-20 sm:top-24 left-0 right-0 flex flex-col items-center z-20">
@@ -87,8 +130,8 @@ const BreathingControls = () => {
         <button
           className="btn btn-circle btn-sm btn-ghost"
           onClick={handleReset}
-          aria-label="重置"
-          title="重置呼吸循環"
+          aria-label={t.reset}
+          title={t.reset}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
@@ -100,7 +143,7 @@ const BreathingControls = () => {
         <button
           className="btn btn-circle btn-primary"
           onClick={handleToggleBreathing}
-          aria-label={breathPhase.isActive ? "暫停" : "開始"}
+          aria-label={breathPhase.isActive ? t.pause : t.start}
         >
           {breathPhase.isActive ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -118,8 +161,8 @@ const BreathingControls = () => {
         <button
           className="btn btn-circle btn-sm btn-ghost"
           onClick={() => setShowSettings(!showSettings)}
-          aria-label="設置"
-          title="呼吸設置"
+          aria-label={t.settings}
+          title={t.settings}
           data-settings-toggle
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -135,7 +178,7 @@ const BreathingControls = () => {
           className="btn btn-sm btn-ghost"
           onClick={() => setShowPatternDropdown(!showPatternDropdown)}
         >
-          {activePattern.name}
+          {language === 'zh' ? activePattern.name : activePattern.nameEn || activePattern.name}
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
             <path d={showPatternDropdown ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6"}></path>
           </svg>
@@ -149,8 +192,16 @@ const BreathingControls = () => {
                 className={`block w-full text-left px-3 py-2 rounded-md ${activePattern.id === BREATHING_PATTERNS[patternKey].id ? 'bg-primary bg-opacity-20' : 'hover:bg-base-200'}`}
                 onClick={() => handlePatternChange(patternKey)}
               >
-                <div className="font-medium">{BREATHING_PATTERNS[patternKey].name}</div>
-                <div className="text-xs opacity-70 line-clamp-2">{BREATHING_PATTERNS[patternKey].description}</div>
+                <div className="font-medium">
+                  {language === 'zh' 
+                    ? BREATHING_PATTERNS[patternKey].name 
+                    : BREATHING_PATTERNS[patternKey].nameEn || BREATHING_PATTERNS[patternKey].name}
+                </div>
+                <div className="text-xs opacity-70 line-clamp-2">
+                  {language === 'zh' 
+                    ? BREATHING_PATTERNS[patternKey].description 
+                    : BREATHING_PATTERNS[patternKey].descriptionEn || BREATHING_PATTERNS[patternKey].description}
+                </div>
               </button>
             ))}
           </div>
@@ -163,13 +214,13 @@ const BreathingControls = () => {
           ref={settingsRef}
           className="bg-base-300 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-lg p-4 w-80 absolute top-full left-1/2 transform -translate-x-1/2 mt-2 max-h-96 overflow-y-auto z-30"
         >
-          <h3 className="text-lg font-medium mb-3">呼吸設置</h3>
+          <h3 className="text-lg font-medium mb-3">{t.settings}</h3>
           
           {/* 循環次數設置 */}
           <div className="form-control mb-2">
             <label className="label">
-              <span className="label-text">循環次數</span>
-              <span className="label-text-alt">{settings.totalCycles > 0 ? settings.totalCycles : '無限'}</span>
+              <span className="label-text">{t.cycles}</span>
+              <span className="label-text-alt">{settings.totalCycles > 0 ? settings.totalCycles : t.infinite}</span>
             </label>
             <input
               type="range"
@@ -180,7 +231,7 @@ const BreathingControls = () => {
               onChange={handleCyclesChange}
             />
             <div className="flex justify-between text-xs px-1">
-              <span>無限</span>
+              <span>{t.infinite}</span>
               <span>5</span>
               <span>10</span>
               <span>15</span>
@@ -197,7 +248,7 @@ const BreathingControls = () => {
                 checked={settings.showVisualGuide}
                 onChange={(e) => handleDisplayChange('showVisualGuide', e.target.checked)}
               />
-              <span className="label-text">顯示視覺引導</span>
+              <span className="label-text">{t.showVisualGuide}</span>
             </label>
             
             <label className="label cursor-pointer justify-start gap-2">
@@ -207,7 +258,7 @@ const BreathingControls = () => {
                 checked={settings.showTextGuide}
                 onChange={(e) => handleDisplayChange('showTextGuide', e.target.checked)}
               />
-              <span className="label-text">顯示文字提示</span>
+              <span className="label-text">{t.showTextGuide}</span>
             </label>
             
             <label className="label cursor-pointer justify-start gap-2">
@@ -217,18 +268,31 @@ const BreathingControls = () => {
                 checked={settings.backgroundMusic}
                 onChange={(e) => handleDisplayChange('backgroundMusic', e.target.checked)}
               />
-              <span className="label-text">背景音樂</span>
+              <span className="label-text">
+                {t.backgroundMusic} <span className="text-xs opacity-70">{t.developing}</span>
+              </span>
             </label>
             
-            <label className="label cursor-pointer justify-start gap-2">
-              <input
-                type="checkbox"
-                className="toggle toggle-primary toggle-sm"
-                checked={settings.vibration}
-                onChange={(e) => handleDisplayChange('vibration', e.target.checked)}
-              />
-              <span className="label-text">振動提示</span>
-            </label>
+            {/* 語言切換 - 改進版 */}
+            <div className="pt-4 border-t border-base-200">
+              <label className="label justify-start gap-2">
+                <span className="label-text">{t.language}</span>
+              </label>
+              <div className="flex mt-1">
+                <button
+                  className={`btn btn-sm flex-1 ${language === 'zh' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => changeLanguage('zh')}
+                >
+                  {texts.zh.chinese}
+                </button>
+                <button
+                  className={`btn btn-sm flex-1 ${language === 'en' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => changeLanguage('en')}
+                >
+                  {texts.en.english}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

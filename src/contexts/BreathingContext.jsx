@@ -18,15 +18,43 @@ export const BreathingProvider = ({ children }) => {
     isActive: false,  // 呼吸循環是否正在進行
   });
   
-  // 控制設置
-  const [settings, setSettings] = useState({
-    totalCycles: 10,  // 預設總循環次數
-    currentCycle: 0,  // 當前循環
-    showVisualGuide: true, // 是否顯示視覺引導
-    showTextGuide: true,   // 是否顯示文字引導
-    backgroundMusic: false, // 是否播放背景音樂
-    vibration: false,       // 是否振動 (移動設備)
+  // 語言設置
+  const [language, setLanguage] = useState(() => {
+    // 嘗試從本地儲存獲取語言設置
+    const savedLanguage = localStorage.getItem('breathing-app-language');
+    return savedLanguage || 'zh'; // 默認為中文
   });
+  
+  // 控制設置
+  const [settings, setSettings] = useState(() => {
+    // 嘗試從本地儲存獲取用戶設置
+    const savedSettings = localStorage.getItem('breathing-app-settings');
+    if (savedSettings) {
+      try {
+        return JSON.parse(savedSettings);
+      } catch (e) {
+        console.error('Error parsing saved settings:', e);
+      }
+    }
+    // 預設設置
+    return {
+      totalCycles: 10,      // 預設總循環次數
+      currentCycle: 0,      // 當前循環
+      showVisualGuide: true, // 是否顯示視覺引導
+      showTextGuide: true,   // 是否顯示文字引導
+      backgroundMusic: false, // 是否播放背景音樂
+    };
+  });
+  
+  // 監聽設置變化並保存到本地儲存
+  useEffect(() => {
+    localStorage.setItem('breathing-app-settings', JSON.stringify(settings));
+  }, [settings]);
+  
+  // 監聽語言變化並保存到本地儲存
+  useEffect(() => {
+    localStorage.setItem('breathing-app-language', language);
+  }, [language]);
   
   // 切換呼吸模式
   const changeBreathingPattern = (patternId) => {
@@ -56,15 +84,22 @@ export const BreathingProvider = ({ children }) => {
     }));
   };
   
+  // 切換語言
+  const changeLanguage = (newLanguage) => {
+    setLanguage(newLanguage);
+  };
+  
   // 提供上下文數據
   const value = {
     activePattern,
     breathPhase,
     settings,
+    language,
     changeBreathingPattern,
     toggleBreathing,
     updateSettings,
-    setBreathPhase
+    setBreathPhase,
+    changeLanguage
   };
   
   return (
