@@ -1,5 +1,5 @@
-// 音效服務模組 - 透過播放/暫停控制音樂
-// 修改後的版本：音樂不自動播放，靜音操作直接控制播放/暫停
+// 音效服務模組 - 增強版，優化 iOS 支援
+// 透過播放/暫停控制音樂，特別針對 iPhone 解決聲音問題
 class AudioService {
   constructor() {
     this.audioContext = null;
@@ -12,16 +12,34 @@ class AudioService {
     this.volume = 0.5; // 默認音量 (0-1)
     this.lastErrorTime = 0;
     this.errorCount = 0;
+    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    this.isIPhone = /iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   }
 
   // 初始化音訊上下文
   init() {
-    if (this.isInitialized && this.audioContext && this.audioContext.state !== 'closed') return true;
+    if (this.isInitialized && this.audioContext && this.audioContext.state !== 'closed') {
+      // 即使已初始化，也嘗試恢復上下文（特別針對 iOS）
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(err => {
+          console.warn('恢復音訊上下文失敗:', err);
+        });
+      }
+      return true;
+    }
 
     try {
       // 建立 AudioContext (適用於不同瀏覽器)
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
       this.audioContext = new AudioContext();
+
+      // 特別為 iOS 添加嘗試恢復，避免處於 suspended 狀態
+      if (this.isIOS && this.audioContext.state === 'suspended') {
+        // 立即嘗試恢復，即使可能失敗
+        this.audioContext.resume().catch(() => {
+          console.warn('iOS: 初始音訊上下文恢復失敗，將在下一次用戶互動時重試');
+        });
+      }
 
       // 建立音量控制節點
       this.gainNode = this.audioContext.createGain();
@@ -30,7 +48,7 @@ class AudioService {
 
       this.isInitialized = true;
       this.errorCount = 0;
-      console.log('音訊服務初始化成功');
+      console.log('音訊服務初始化成功', this.isIOS ? '(iOS 模式)' : '');
       return true;
     } catch (error) {
       this._logError('初始化音訊服務失敗:', error);
@@ -90,6 +108,11 @@ class AudioService {
     }
 
     try {
+      // 對於 iPhone，實現特殊處理
+      if (this.isIPhone) {
+        console.log('iPhone: 開始加載背景音樂');
+      }
+      
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -105,7 +128,15 @@ class AudioService {
       this.musicBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       console.log('背景音樂加載完成');
       
-      // 不自動播放音樂
+      // 對於 iPhone，確保音訊上下文處於活躍狀態
+      if (this.isIPhone && this.audioContext.state === 'suspended') {
+        try {
+          await this.audioContext.resume();
+          console.log('iPhone: 音樂加載後音訊上下文已恢復');
+        } catch (error) {
+          console.warn('iPhone: 音樂加載後恢復音訊上下文失敗:', error);
+        }
+      }
       
       return true;
     } catch (error) {
@@ -119,13 +150,26 @@ class AudioService {
     }
   }
 
-  // 播放背景音樂 - 修改為直接播放，不根據靜音狀態
+  // 播放背景音樂 - 優化 iPhone 支持
   playBackgroundMusic() {
     if (!this.isInitialized) {
       if (!this.init()) return false;
     }
     
     try {
+      // 如果是 iPhone 並且音訊上下文處於暫停狀態，先恢復
+      if (this.isIPhone && this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(err => {
+          console.warn('iPhone: 播放前恢復音訊上下文失敗:', err);
+          // 繼續嘗試播放，因為有些 iOS 版本需要在播放操作中恢復
+        });
+        
+        // iPhone 特殊處理：短暫延遲以確保上下文恢復
+        if (this.isIPhone) {
+          console.log(`iPhone: 嘗試播放音樂（音訊上下文狀態: ${this.audioContext.state}）`);
+        }
+      }
+      
       // 如果已經在播放，只需恢復
       if (this.isPlaying && this.backgroundMusic) {
         if (this.audioContext.state === 'suspended') {
@@ -154,6 +198,22 @@ class AudioService {
       // 設置為非靜音狀態
       this.isMuted = false;
       
+      // 嘗試解決 iOS 音訊播放問題的額外步驟
+      if (this.isIPhone) {
+        // 在播放前先確認音訊上下文狀態
+        if (this.audioContext.state !== 'running') {
+          console.log('iPhone: 嘗試在播放前恢復音訊上下文');
+          
+          try {
+            // 同步嘗試恢復上下文
+            this.audioContext.resume();
+          } catch (e) {
+            console.warn('iPhone: 播放前同步恢復失敗:', e);
+          }
+        }
+      }
+      
+      // 開始播放
       this.backgroundMusic.start(0);
       
       this.isPlaying = true;
