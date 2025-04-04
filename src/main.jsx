@@ -9,6 +9,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BreathingProvider>
       <App />
+      <Analytics />
     </BreathingProvider>
   </React.StrictMode>,
 )
