@@ -42,60 +42,6 @@ function App() {
     };
   }, []);
 
-  // 增加全局 iOS 音訊解鎖處理
-  useEffect(() => {
-    // 檢測 iOS 設備
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isIPhone = /iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    
-    if (isIOS) {
-      console.log('檢測到 iOS 設備，添加特殊音訊處理');
-      
-      // 對於 iPhone 特別處理
-      if (isIPhone) {
-        console.log('檢測到 iPhone，添加全局音訊解鎖');
-        
-        // 在整個文檔上添加觸控監聽，嘗試解鎖音訊
-        const unlockAudio = () => {
-          // 嘗試恢復音訊上下文
-          if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-            audioService.audioContext.resume().then(() => {
-              console.log('全局觸控事件: 音訊上下文已恢復');
-            }).catch(err => {
-              console.warn('全局觸控事件: 恢復音訊上下文失敗:', err);
-            });
-          }
-          
-          // 如果背景音樂沒有播放但設置為非靜音，嘗試開始播放
-          if (!audioService.isPlaying && !settings.musicMuted && audioService.musicBuffer) {
-            audioService.playBackgroundMusic();
-          }
-        };
-        
-        // 添加多種事件以捕獲所有可能的互動
-        document.addEventListener('touchend', unlockAudio, { passive: true });
-        document.addEventListener('touchstart', unlockAudio, { passive: true });
-        document.addEventListener('click', unlockAudio, { passive: true });
-        
-        // 每隔一段時間檢查音訊狀態 (iOS可能會自動暫停音訊上下文)
-        const audioContextInterval = setInterval(() => {
-          if (audioService.audioContext && 
-              audioService.audioContext.state === 'suspended' && 
-              userInteractionHandler.hasUserInteracted()) {
-            audioService.audioContext.resume().catch(() => {});
-          }
-        }, 1000);
-        
-        return () => {
-          document.removeEventListener('touchend', unlockAudio);
-          document.removeEventListener('touchstart', unlockAudio);
-          document.removeEventListener('click', unlockAudio);
-          clearInterval(audioContextInterval);
-        };
-      }
-    }
-  }, [settings.musicMuted]);
-
   return (
     <Layout>
       {/* 視覺引導動畫 - 全屏顯示，與原始 HTML 一致 */}

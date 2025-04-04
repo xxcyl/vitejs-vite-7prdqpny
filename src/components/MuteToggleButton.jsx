@@ -59,85 +59,81 @@ const MuteToggleButton = () => {
     if (userInteractionHandler.hasUserInteracted()) {
       loadMusic();
     }
-    
-    // iOS 特定處理
-    if (isIPhone) {
-      // 在整個組件添加點擊處理，嘗試解鎖音訊
-      const unlockAudio = () => {
-        // 確保音訊上下文處於活躍狀態
-        if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-          audioService.audioContext.resume().then(() => {
-            console.log('MuteToggleButton: 音訊上下文已恢復');
-          }).catch(err => {
-            console.warn('MuteToggleButton: 恢復音訊上下文失敗:', err);
-          });
-        }
-      };
-      
-      document.addEventListener('touchend', unlockAudio, { passive: true });
-      
-      return () => {
-        document.removeEventListener('touchend', unlockAudio);
-      };
-    }
   }, []);
   
   // 處理靜音按鈕點擊
-  const handleToggleMute = () => {
-    // iPhone 特殊處理
-    if (isIPhone) {
-      // 確保 AudioContext 已激活
-      if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
-        audioService.audioContext.resume().then(() => {
-          console.log('iPhone: 音訊上下文已成功恢復');
-          
-          // 繼續執行切換邏輯
-          toggleAudioAfterResume();
-        }).catch(err => {
-          console.error('iPhone: 恢復音訊上下文失敗:', err);
-          
-          // 儘管出錯，仍嘗試切換
-          toggleAudioAfterResume();
-        });
-      } else {
-        toggleAudioAfterResume();
+  const handleToggleMute = (event) => {
+    // 最關鍵步驟：直接在用戶互動事件處理函數中創建和恢復 AudioContext
+    // 不要放在回調函數或 Promise 中
+    
+    // 1. 確保 AudioContext 存在並且處於運行狀態
+    if (!audioService.audioContext) {
+      // 直接在事件處理函數中創建
+      try {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioService.audioContext = new AudioContext();
+        console.log('直接在事件處理函數中創建 AudioContext:', audioService.audioContext.state);
+        
+        // 初始化其他必要組件
+        if (!audioService.gainNode) {
+          audioService.gainNode = audioService.audioContext.createGain();
+          audioService.gainNode.gain.value = audioService.volume;
+          audioService.gainNode.connect(audioService.audioContext.destination);
+        }
+      } catch (e) {
+        console.error('創建 AudioContext 失敗:', e);
       }
-    } else {
-      // 非 iPhone 設備的標準邏輯
-      toggleAudioAfterResume();
     }
     
-    // 音訊切換通用邏輯
-    function toggleAudioAfterResume() {
-      // 如果音訊尚未加載，嘗試加載
-      if (!musicLoaded && userInteractionHandler.hasUserInteracted()) {
-        audioService.loadBackgroundMusic(BACKGROUND_MUSIC.URL)
-          .then(success => {
-            setMusicLoaded(success);
-            if (success) {
-              const newMutedState = !settings.musicMuted;
-              updateSettings({ musicMuted: newMutedState });
-              
-              // 根據靜音狀態切換音樂播放
-              if (newMutedState) {
-                audioService.pauseBackgroundMusic();
-              } else {
+    // 2. 確保 AudioContext 處於運行狀態
+    if (audioService.audioContext && audioService.audioContext.state === 'suspended') {
+      // 直接在事件處理函數中恢復，不使用 Promise
+      audioService.audioContext.resume();
+      console.log('直接在事件處理函數中恢復 AudioContext');
+    }
+    
+    // 3. 切換靜音狀態
+    const newMutedState = !settings.musicMuted;
+    updateSettings({ musicMuted: newMutedState });
+    
+    // 4. 處理音樂播放
+    if (newMutedState) {
+      audioService.pauseBackgroundMusic();
+    } else {
+      // 針對 iPhone 使用標準 Audio 元素
+      if (isIPhone) {
+        // 使用標準 Audio 元素直接播放
+        if (!audioService.backgroundAudioElement) {
+          const audio = new Audio(BACKGROUND_MUSIC.URL);
+          audio.loop = true;
+          audio.volume = audioService.volume;
+          
+          // 直接播放 - 必須在事件處理函數中調用
+          audio.play().catch(e => console.error('播放音訊失敗:', e));
+          
+          audioService.backgroundAudioElement = audio;
+          audioService.isPlaying = true;
+          setMusicLoaded(true);
+        } else {
+          audioService.backgroundAudioElement.play().catch(e => console.error('繼續播放音訊失敗:', e));
+          audioService.isPlaying = true;
+        }
+      } else {
+        // 非 iPhone 設備使用 Web Audio API
+        if (!musicLoaded) {
+          setIsLoading(true);
+          // 加載音樂
+          audioService.loadBackgroundMusic(BACKGROUND_MUSIC.URL)
+            .then(success => {
+              setMusicLoaded(success);
+              if (success) {
                 audioService.playBackgroundMusic();
               }
-            }
-          });
-        return;
-      }
-      
-      // 更新設置和音訊服務的靜音狀態
-      const newMutedState = !settings.musicMuted;
-      updateSettings({ musicMuted: newMutedState });
-      
-      // 根據靜音狀態切換音樂播放
-      if (newMutedState) {
-        audioService.pauseBackgroundMusic();
-      } else {
-        audioService.playBackgroundMusic();
+              setIsLoading(false);
+            });
+        } else {
+          audioService.playBackgroundMusic();
+        }
       }
     }
   };
