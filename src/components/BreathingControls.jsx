@@ -40,9 +40,11 @@ const BreathingControls = () => {
     // 切換呼吸引導狀態
     toggleBreathing();
     
-    // 如果是要暫停呼吸引導，同時暫停背景音樂
+    // 如果是要暫停呼吸引導，同時暫停背景音樂並更新音樂按鈕狀態
     if (breathPhase.isActive && !settings.musicMuted) {
       audioService.pauseBackgroundMusic();
+      // 同步更新靜音設置狀態，以便音樂按鈕圖示也跟著變化
+      updateSettings({ musicMuted: true });
     }
   };
   
