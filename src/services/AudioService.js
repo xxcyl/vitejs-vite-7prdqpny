@@ -1,4 +1,5 @@
-// 音效服務模組 - 自動循環播放，透過靜音控制
+// 音效服務模組 - 透過播放/暫停控制音樂
+// 修改後的版本：音樂不自動播放，靜音操作直接控制播放/暫停
 class AudioService {
   constructor() {
     this.audioContext = null;
@@ -24,7 +25,7 @@ class AudioService {
 
       // 建立音量控制節點
       this.gainNode = this.audioContext.createGain();
-      this.gainNode.gain.value = this.isMuted ? 0 : this.volume; // 初始化為靜音或設定音量
+      this.gainNode.gain.value = this.volume; // 初始設定音量
       this.gainNode.connect(this.audioContext.destination);
 
       this.isInitialized = true;
@@ -45,8 +46,7 @@ class AudioService {
     
     try {
       this.volume = Math.max(0, Math.min(1, volume));
-      // 只有在非靜音狀態下才應用新音量
-      if (!this.isMuted && this.gainNode) {
+      if (this.gainNode) {
         this.gainNode.gain.value = this.volume;
       }
       return true;
@@ -56,28 +56,14 @@ class AudioService {
     }
   }
 
-  // 切換靜音
+  // 切換靜音 - 修改為暫停/播放音樂
   toggleMute() {
-    if (!this.isInitialized) {
-      if (!this.init()) return false;
-    }
-    
     try {
       this.isMuted = !this.isMuted;
       
-      if (this.gainNode) {
-        // 平滑過渡音量變化
-        const time = this.audioContext.currentTime;
-        this.gainNode.gain.cancelScheduledValues(time);
-        this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, time);
-        this.gainNode.gain.linearRampToValueAtTime(
-          this.isMuted ? 0 : this.volume, 
-          time + 0.2
-        );
-      }
-      
-      // 如果已加載音樂但尚未播放，則開始播放
-      if (this.musicBuffer && !this.isPlaying && !this.isMuted) {
+      if (this.isMuted) {
+        this.pauseBackgroundMusic();
+      } else {
         this.playBackgroundMusic();
       }
       
@@ -89,7 +75,7 @@ class AudioService {
     }
   }
 
-  // 設置靜音狀態
+  // 設置靜音狀態 - 修改為直接控制播放/暫停
   setMuted(muted) {
     if (muted !== this.isMuted) {
       return this.toggleMute();
@@ -97,7 +83,7 @@ class AudioService {
     return true;
   }
 
-  // 加載背景音樂
+  // 加載背景音樂 - 修改為只加載，不自動播放
   async loadBackgroundMusic(url) {
     if (!this.isInitialized) {
       if (!this.init()) return false;
@@ -119,8 +105,7 @@ class AudioService {
       this.musicBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       console.log('背景音樂加載完成');
       
-      // 如果加載成功就自動開始播放 (但保持靜音狀態)
-      this.playBackgroundMusic();
+      // 不自動播放音樂
       
       return true;
     } catch (error) {
@@ -134,7 +119,7 @@ class AudioService {
     }
   }
 
-  // 播放背景音樂
+  // 播放背景音樂 - 修改為直接播放，不根據靜音狀態
   playBackgroundMusic() {
     if (!this.isInitialized) {
       if (!this.init()) return false;
@@ -165,6 +150,10 @@ class AudioService {
       
       // 連接節點並播放
       this.backgroundMusic.connect(this.gainNode);
+      
+      // 設置為非靜音狀態
+      this.isMuted = false;
+      
       this.backgroundMusic.start(0);
       
       this.isPlaying = true;
@@ -180,7 +169,16 @@ class AudioService {
   pauseBackgroundMusic() {
     if (this.isPlaying && this.audioContext) {
       try {
-        this.audioContext.suspend();
+        // 設置為靜音狀態
+        this.isMuted = true;
+        
+        // 如果正在播放，停止
+        if (this.backgroundMusic) {
+          this.stopBackgroundMusic();
+        } else {
+          this.audioContext.suspend();
+        }
+        
         this.isPlaying = false;
         console.log('背景音樂已暫停');
         return true;
@@ -194,15 +192,23 @@ class AudioService {
 
   // 恢復播放背景音樂
   resumeBackgroundMusic() {
-    if (!this.isPlaying && this.audioContext && this.audioContext.state === 'suspended') {
-      try {
-        this.audioContext.resume();
-        this.isPlaying = true;
-        console.log('背景音樂已恢復');
-        return true;
-      } catch (error) {
-        this._logError('恢復背景音樂失敗:', error);
-        return false;
+    if (this.isMuted) {
+      return false; // 靜音狀態下不恢復播放
+    }
+    
+    if (!this.isPlaying && this.audioContext) {
+      if (this.backgroundMusic) {
+        return this.playBackgroundMusic();
+      } else if (this.audioContext.state === 'suspended') {
+        try {
+          this.audioContext.resume();
+          this.isPlaying = true;
+          console.log('背景音樂已恢復');
+          return true;
+        } catch (error) {
+          this._logError('恢復背景音樂失敗:', error);
+          return false;
+        }
       }
     }
     return false;

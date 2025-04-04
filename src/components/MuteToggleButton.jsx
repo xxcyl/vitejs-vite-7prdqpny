@@ -33,14 +33,9 @@ const MuteToggleButton = () => {
       setIsLoading(true);
       
       try {
-        // 在加載成功時會自動播放（但保持靜音狀態）
+        // 只加載音樂，不自動播放
         const success = await audioService.loadBackgroundMusic(BACKGROUND_MUSIC.URL);
         setMusicLoaded(success);
-        
-        // 設置初始靜音狀態
-        if (success) {
-          audioService.setMuted(settings.musicMuted);
-        }
       } catch (error) {
         console.error('加載音樂失敗:', error);
         setMusicLoaded(false);
@@ -65,23 +60,6 @@ const MuteToggleButton = () => {
     }
   }, []);
   
-  // 監聽呼吸狀態變化
-  useEffect(() => {
-    if (!musicLoaded) return;
-    
-    // 確保音樂在呼吸活動時繼續播放
-    if (breathPhase.isActive) {
-      audioService.resumeBackgroundMusic();
-    }
-  }, [breathPhase.isActive, musicLoaded]);
-  
-  // 監聽靜音設置變化
-  useEffect(() => {
-    if (!musicLoaded) return;
-    
-    audioService.setMuted(settings.musicMuted);
-  }, [settings.musicMuted, musicLoaded]);
-  
   // 處理靜音按鈕點擊
   const handleToggleMute = () => {
     // 如果音訊尚未加載，嘗試加載
@@ -92,14 +70,28 @@ const MuteToggleButton = () => {
           if (success) {
             const newMutedState = !settings.musicMuted;
             updateSettings({ musicMuted: newMutedState });
-            audioService.setMuted(newMutedState);
+            
+            // 根據靜音狀態切換音樂播放
+            if (newMutedState) {
+              audioService.pauseBackgroundMusic();
+            } else {
+              audioService.playBackgroundMusic();
+            }
           }
         });
       return;
     }
     
     // 更新設置和音訊服務的靜音狀態
-    updateSettings({ musicMuted: !settings.musicMuted });
+    const newMutedState = !settings.musicMuted;
+    updateSettings({ musicMuted: newMutedState });
+    
+    // 根據靜音狀態切換音樂播放
+    if (newMutedState) {
+      audioService.pauseBackgroundMusic();
+    } else {
+      audioService.playBackgroundMusic();
+    }
   };
 
   return (
